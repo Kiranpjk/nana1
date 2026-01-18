@@ -104,65 +104,165 @@
             border-color: var(--accent-color);
             font-weight: 600;
         }
+
+        .movie-selector {
+            margin-bottom: 20px;
+        }
+        
+        select {
+            background-color: #1e293b;
+            color: var(--text-color);
+            border: 1px solid #334155;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+            width: 100%;
+            max-width: 400px;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>Dhurandhar (2025)</h1>
+        <div class="movie-selector">
+            <select id="movieSelect" onchange="loadMovie(this.value)">
+                <!-- Options will be populated by JS -->
+            </select>
+        </div>
+
+        <h1 id="movieTitle">Loading...</h1>
         
         <div class="video-container">
-            <!-- 
-                Sandboxing attributes:
-                - allow-scripts: Required for the video player to run JS.
-                - allow-same-origin: Required for some players to load resources correctly (use with caution, but usually needed).
-                - allow-presentation: Allows fullscreen/casting.
-                - allow-fullscreen: Standard attribute.
-                
-                MISSING allow-popups: This is the key to blocking new windows/tabs from ads.
-                MISSING allow-forms: Prevents form submissions if any malicious ads try to capture input.
-            -->
             <iframe 
                 id="videoPlayer"
-                src="https://drive.google.com/file/d/1DL0zldxDt05Gv5reMyLq67VLlRVTqLHB/preview" 
+                src="" 
                 scrolling="no" 
                 allowfullscreen="true"
                 sandbox="allow-scripts allow-same-origin allow-presentation allow-forms"
             ></iframe>
         </div>
 
-        <div class="controls">
-            <button onclick="changeSource('gdrive')" class="btn active" id="btn-gdrive">Server 1 (Google Drive)</button>
-            <button onclick="changeSource('minochinos')" class="btn" id="btn-minochinos">Server 2 (Backup)</button>
+        <div class="controls" id="sourceControls">
+            <!-- Source buttons will be injected here -->
         </div>
 
-        <div class="info">
-            <p>High Definition • Hindi • 2025</p>
-            <div class="badge">Ad-Lite Mode Active</div>
-            <div id="drive-warning" style="display:block; color: #fbbf24; font-size: 0.8rem; margin-top: 5px;">Note: Google Drive may have playback limits.</div>
+        <div class="info" id="movieInfo">
+            <!-- Info will be injected here -->
         </div>
     </div>
 
     <script>
-        function changeSource(source) {
-            const player = document.getElementById('videoPlayer');
-            const btnMino = document.getElementById('btn-minochinos');
-            const btnDrive = document.getElementById('btn-gdrive');
-            const driveWarning = document.getElementById('drive-warning');
+        const movies = {
+            'dhurandhar-2025': {
+                title: "Dhurandhar (2025)",
+                info: "High Definition • Hindi • 2025",
+                badge: "Ad-Lite Mode Active",
+                defaultSource: 'gdrive',
+                sources: [
+                    {
+                        id: 'gdrive',
+                        label: 'Server 1 (Google Drive)',
+                        url: 'https://drive.google.com/file/d/1DL0zldxDt05Gv5reMyLq67VLlRVTqLHB/preview',
+                        warning: 'Note: Google Drive may have playback limits.'
+                    },
+                    {
+                        id: 'minochinos',
+                        label: 'Server 2 (Backup)',
+                        url: 'https://minochinos.com/embed/958rcgrj9b7y',
+                        warning: null
+                    }
+                ]
+            },
+            'msvpg-2026': {
+                title: "Mana Shankara Vara Prasad Garu (2026)",
+                info: "High Definition • Telugu • 2026",
+                badge: "Ad-Lite Mode Active",
+                defaultSource: 'gdrive',
+                sources: [
+                    {
+                        id: 'gdrive',
+                        label: 'Server 1 (Google Drive)',
+                        url: 'https://drive.google.com/file/d/1qytPJOLXXZzbV0wrYcJnfSg_E-RsuSj7/preview',
+                        warning: 'Note: Google Drive may have playback limits.'
+                    }
+                ]
+            }
+        };
 
-            if (source === 'minochinos') {
-                player.src = "https://minochinos.com/embed/958rcgrj9b7y";
-                // Minochinos needs stricter sandboxing or specific flags, usually ad-blocking is main goal
-                // Keeping existing sandbox flags
-                btnMino.classList.add('active');
-                btnDrive.classList.remove('active');
-                driveWarning.style.display = 'none';
-            } else if (source === 'gdrive') {
-                // Convert view link to preview link for embedding
-                player.src = "https://drive.google.com/file/d/1DL0zldxDt05Gv5reMyLq67VLlRVTqLHB/preview";
-                btnMino.classList.remove('active');
-                btnDrive.classList.add('active');
-                driveWarning.style.display = 'block';
+        const movieSelect = document.getElementById('movieSelect');
+        const titleEl = document.getElementById('movieTitle');
+        const player = document.getElementById('videoPlayer');
+        const controlsEl = document.getElementById('sourceControls');
+        const infoEl = document.getElementById('movieInfo');
+
+        // Initialize
+        function init() {
+            // Populate dropdown
+            for (const [key, movie] of Object.entries(movies)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = movie.title;
+                movieSelect.appendChild(option);
+            }
+            
+            // Load default (first movie) or restored state could go here
+            loadMovie('dhurandhar-2025');
+        }
+
+        function loadMovie(movieId) {
+            const movie = movies[movieId];
+            if (!movie) return;
+
+            // Update Title
+            titleEl.textContent = movie.title;
+
+            // Update Info
+            infoEl.innerHTML = `
+                <p>${movie.info}</p>
+                <div class="badge">${movie.badge}</div>
+                <div id="drive-warning" style="display:none; color: #fbbf24; font-size: 0.8rem; margin-top: 5px;"></div>
+            `;
+
+            // Setup Controls
+            controlsEl.innerHTML = '';
+            movie.sources.forEach(source => {
+                const btn = document.createElement('button');
+                btn.className = 'btn';
+                btn.textContent = source.label;
+                btn.onclick = () => setSource(movieId, source.id);
+                btn.id = `btn-${source.id}`;
+                controlsEl.appendChild(btn);
+            });
+
+            // Load default source
+            setSource(movieId, movie.defaultSource);
+        }
+
+        function setSource(movieId, sourceId) {
+            const movie = movies[movieId];
+            const source = movie.sources.find(s => s.id === sourceId);
+            if (!source) return;
+
+            // Update Player
+            player.src = source.url;
+
+            // Update Active Button State
+            const buttons = controlsEl.querySelectorAll('.btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-${sourceId}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            // Update Warning
+            const warningEl = document.getElementById('drive-warning');
+            if (source.warning) {
+                warningEl.textContent = source.warning;
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
             }
         }
+
+        init();
     </script>
